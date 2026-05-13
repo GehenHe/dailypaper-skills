@@ -48,13 +48,13 @@ description: |
 
 主 Agent 自己完成，用 Glob 和 Read 工具扫描 Obsidian 笔记库：
 
-1. 扫描 `{NOTES_PATH}/` 下所有分类目录（跳过 `_` 开头但保留 `_待整理`），列出每个分类下的 `.md` 文件名
+1. 扫描 `{NOTES_PATH}/` 下所有分类目录（跳过 `_概念`，保留 `_待整理` 和 `{YYYY}/{来源}`），列出每个分类下的 `.md` 文件名
 2. 扫描 `{CONCEPTS_PATH}/` 下所有主题目录，列出每个主题下的概念笔记
 3. 生成索引文本，格式：
 
 ```
 ### 分类名
-  - [[笔记名]] (相对路径)
+  - [[笔记名]] (相对路径, report_mode)
 ### 概念/主题名
   - [[概念1]], [[概念2]], ...
 ```
@@ -62,7 +62,7 @@ description: |
 4. **匹配已有论文笔记**：将候选论文与笔记库中的论文笔记进行匹配。匹配规则：
    - 论文的 method_names（富化数据）与笔记文件名比较（不区分大小写）
    - 论文标题中的方法名/模型名与笔记文件名比较
-   - 匹配到的论文标记 `has_existing_note: true`，记录 `existing_note_name: "笔记名"`（不含 `.md`）
+   - 匹配到的论文标记 `has_existing_note: true`，记录 `existing_note_name: "笔记名"`（不含 `.md`）和 `existing_report_mode: quick|deep`
 
 ### Phase 5: 毒舌点评
 
@@ -79,12 +79,13 @@ description: |
 
 #### 数据来源提醒
 
-每篇论文的 `source`（hf-daily / hf-trending / arxiv）和 `hf_upvotes` 来自抓取数据，必须保留到输出中。`method_summary` 来自富化数据，用于撰写核心方法描述。
+每篇论文的 `source`（hf-daily / hf-trending / arxiv / conference-*）、`hf_upvotes`、`conference`、`year` 来自抓取数据，必须保留到输出中。`method_summary` 来自富化数据，用于撰写核心方法描述。
 
 **来源格式规则**（按 source 字段分别显示）：
 - `hf-daily` → `📰 HF Daily，⬆️ {hf_upvotes}`
 - `hf-trending` → 🔥 HF Trending，⬆️ {hf_upvotes}`
 - `arxiv` → `📄 arXiv 关键词检索`（不显示 upvotes，因为没有）
+- `conference-*` → `🏛️ {conference} {year}，官方来源（OpenReview / CVF / ACL Anthology / AAAI / SIGMM Open TOC）`
 
 #### 兜底过滤
 
@@ -149,7 +150,7 @@ description: |
 ```
 
 分流表规则：
-- 论文名用 `[[wikilink]]`，Obsidian 中可直接跳转到笔记
+- 论文名用 `[[wikilink]]`，Obsidian 中可直接跳转到快速报告或深度笔记
 - **wikilink 必须使用论文的方法名/模型名缩写**（如 `[[DAPL]]`、`[[NE-Dreamer]]`），不要用完整论文标题（如 ~~`[[Emerging Extrinsic Dexterity in Cluttered Scenes]]`~~）。方法名通常是标题冒号前的缩写，或 `method_names` 列表中排第一的名称。这样后续 paper-reader 生成笔记时文件名能自动匹配
 - 每篇论文后括号内一句话说明理由
 - 同等级论文用 `·` 分隔，写在同一行
@@ -164,11 +165,13 @@ description: |
 ### N. 论文标题
 - **链接**: [arXiv](https://arxiv.org/abs/XXXX) | [PDF](https://arxiv.org/pdf/XXXX)
 - **来源**: {见下方来源格式}
+- **会议**: {conference} {year}（仅 conference 字段存在时显示）
 
 > ⏪ **再推提醒**：这篇在 {last_recommend_date} 推荐过
 > ← 仅对 is_re_recommend=true 的论文显示
 
-- 📒 **已有笔记**: [[existing_note_name]] — 直接看笔记，不再重复解释
+- 📄 **快速报告**: [[existing_note_name]] — report_mode=quick 时显示
+- 📒 **深度笔记**: [[existing_note_name]] — report_mode=deep 或 legacy 笔记时显示
 ```
 
 **对于没有笔记的论文**，使用完整格式：
@@ -179,6 +182,7 @@ description: |
 - **机构**: 从富化的 affiliations 字段获取，列出所有机构。如果 affiliations 为空，再检查原始 affiliations 字段。都没有则写"未知"
 - **链接**: [arXiv](https://arxiv.org/abs/XXXX) | [PDF](https://arxiv.org/pdf/XXXX)
 - **来源**: {见下方来源格式}
+- **会议**: {conference} {year}（仅 conference 字段存在时显示）
 
 > ⏪ **再推提醒**：这篇在 {last_recommend_date} 推荐过
 > ← 仅对 is_re_recommend=true 的论文显示
@@ -224,8 +228,9 @@ tags: [daily-papers, auto-generated]
 
 1. **更新历史记录**：
    - 读取 `{DAILY_PAPERS_PATH}/.history.json`（不存在则创建空数组）
-   - 提取本次推荐的所有 arXiv ID + 标题，追加为 `{"id": "XXXX", "date": "YYYY-MM-DD", "title": "..."}`
-   - **去重规则**：如果某个 arXiv ID 已存在于 history 中，保留**最早的 date**（不要用今天的日期覆盖）
+   - 提取本次推荐的所有论文 ID + 标题，追加为 `{"id": "XXXX", "date": "YYYY-MM-DD", "title": "..."}`
+   - ID 优先级：arXiv ID → `paper_id` → DOI → OpenReview forum / ACL Anthology ID / CVF path
+   - **去重规则**：如果某个 ID 已存在于 history 中，保留**最早的 date**（不要用今天的日期覆盖）
    - 只保留最近 30 天的记录（删除 date 早于 30 天前的条目）
    - 写回 `.history.json`
    - **完整性校验**（必须执行）：

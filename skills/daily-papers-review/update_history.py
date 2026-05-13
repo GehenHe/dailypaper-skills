@@ -61,6 +61,21 @@ def extract_arxiv_id_from_url(url: str) -> str:
     return m.group(1) if m else ""
 
 
+def paper_history_id(paper: dict) -> str:
+    """Choose a stable history ID for arXiv and official conference papers."""
+    arxiv_id = paper.get('arxiv_id', '')
+    if not arxiv_id:
+        arxiv_id = extract_arxiv_id_from_url(paper.get('url', '')) or extract_arxiv_id_from_url(paper.get('pdf', ''))
+    if arxiv_id:
+        return arxiv_id
+    for key in ('paper_id', 'doi', 'openreview_forum', 'acl_anthology_id', 'cvf_paper_path'):
+        value = paper.get(key, '')
+        if value:
+            return f"{key}:{value}"
+    title = re.sub(r'\s+', ' ', paper.get('title', '').strip().lower())
+    return f"title:{title[:120]}" if title else ""
+
+
 def load_from_enriched(path: str) -> list:
     """Load papers from enriched JSON file."""
     with open(path, 'r', encoding='utf-8') as f:
@@ -68,16 +83,16 @@ def load_from_enriched(path: str) -> list:
 
     entries = []
     for p in papers:
-        arxiv_id = p.get('arxiv_id', '')
-        if not arxiv_id:
-            url = p.get('url', '')
-            arxiv_id = extract_arxiv_id_from_url(url)
+        paper_id = paper_history_id(p)
 
-        if arxiv_id:
+        if paper_id:
             entries.append({
-                'id': arxiv_id,
+                'id': paper_id,
                 'title': p.get('title', '')[:200],
                 'score': p.get('score', 0),
+                'source': p.get('source', ''),
+                'conference': p.get('conference', ''),
+                'year': p.get('year', ''),
             })
     return entries
 

@@ -20,7 +20,7 @@ def main() -> int:
         vault_root=obsidian_vault_path(),
         root_dir=paper_notes_dir(),
         title_prefix="论文目录页",
-        intro="用于浏览论文笔记、分类目录和子主题入口。",
+        intro="用于浏览论文阅读报告、PDF 归档、分类目录和子主题入口；包含 论文笔记/YYYY/来源/ 结构。",
         exclude_dir_names={paths_config()["concepts_folder"]},
     )
     print(json.dumps(summary.to_dict(), ensure_ascii=False, indent=2))

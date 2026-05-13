@@ -11,7 +11,7 @@ Usage:
 The script:
 1. Scans the notes directory for existing paper notes
 2. Matches papers in the recommendation file with existing notes
-3. Inserts note links after the "来源" line for each matched paper
+3. Inserts quick-report or deep-note links after the "来源" line for each matched paper
 4. Updates the "分流表" section to use the correct wikilink names
 """
 
@@ -27,6 +27,26 @@ if str(_SHARED_DIR) not in sys.path:
 from user_config import obsidian_vault_path, paper_notes_dir
 
 NOTES_DIR = paper_notes_dir()
+
+
+def read_report_mode(md_file: Path) -> str:
+    """Read report_mode from YAML frontmatter; default to deep for legacy notes."""
+    try:
+        text = md_file.read_text(encoding='utf-8', errors='ignore')
+    except OSError:
+        return 'deep'
+    m = re.match(r'^---\s*\n(.*?)\n---', text, re.DOTALL)
+    if not m:
+        return 'deep'
+    fm = m.group(1)
+    mm = re.search(r'^report_mode:\s*([A-Za-z_-]+)\s*$', fm, re.MULTILINE)
+    return (mm.group(1).strip().lower() if mm else 'deep') or 'deep'
+
+
+def link_label_for_mode(report_mode: str) -> str:
+    if report_mode == 'quick':
+        return '📄 **快速报告**'
+    return '📒 **深度笔记**'
 
 
 def scan_notes() -> dict:
@@ -47,6 +67,7 @@ def scan_notes() -> dict:
         notes_index[method_name.lower()] = {
             'name': method_name,
             'path': md_file.relative_to(NOTES_DIR.parent),
+            'report_mode': read_report_mode(md_file),
         }
 
     return notes_index
@@ -97,8 +118,8 @@ def match_papers_with_notes(content: str, notes_index: dict) -> list:
 
         source_line_end = source_match.end()
 
-        # Check if note link already exists
-        if re.search(r'- 📒 \*\*笔记\*\*:', section_content):
+        # Check if any report/note link already exists
+        if re.search(r'- (?:📄|📒) \*\*(?:快速报告|深度笔记|笔记|已有笔记)\*\*:', section_content):
             continue  # Already has note link
 
         # Try to match with existing notes
@@ -108,6 +129,7 @@ def match_papers_with_notes(content: str, notes_index: dict) -> list:
                 'paper_title': paper_title,
                 'method_name': method_name,
                 'note_name': notes_index[method_lower]['name'],
+                'report_mode': notes_index[method_lower].get('report_mode', 'deep'),
                 'section_start': section_start,
                 'source_line_end': section_start + source_line_end,
             })
@@ -128,7 +150,8 @@ def backfill_links(recommendation_path: Path, notes_index: dict) -> int:
 
     # Insert note links (in reverse order to preserve positions)
     for match in reversed(matches):
-        insert_text = f'\n- 📒 **笔记**: [[{match["note_name"]}]]'
+        label = link_label_for_mode(match.get('report_mode', 'deep'))
+        insert_text = f'\n- {label}: [[{match["note_name"]}]]'
         content = (
             content[:match['source_line_end']] +
             insert_text +

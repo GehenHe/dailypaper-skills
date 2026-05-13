@@ -12,6 +12,8 @@ Usage:
 Stderr: progress logs.  Stdout: JSON array of top papers (30 * days).
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import re
@@ -26,11 +28,14 @@ _SHARED_DIR = Path(__file__).resolve().parent.parent / "_shared"
 if str(_SHARED_DIR) not in sys.path:
     sys.path.insert(0, str(_SHARED_DIR))
 
-from user_config import daily_papers_config, daily_papers_dir
+from conference_sources import fetch_conference_papers as fetch_official_conference_papers
+from conference_sources.common import paper_dedup_key
+from user_config import conference_papers_config, daily_papers_config, daily_papers_dir, venue_folder_label
 
 # ── Configuration ──────────────────────────────────────────────────────────
 
 _CONFIG = daily_papers_config()
+_CONFERENCE_CONFIG = conference_papers_config()
 
 KEYWORDS = _CONFIG["keywords"]
 NEGATIVE_KEYWORDS = _CONFIG["negative_keywords"]
@@ -311,12 +316,45 @@ def fetch_arxiv_papers(start_date=None, end_date=None, days: int = 1) -> list[di
     return scored
 
 
+def fetch_conference_papers(
+    years: list[int] | None = None,
+    venues: list[str] | None = None,
+    max_per_venue: int | None = None,
+) -> list[dict]:
+    """Fetch AI top-conference papers from official sources first."""
+    cfg = _CONFERENCE_CONFIG
+    selected_venues = venues or list(cfg.get("venues") or [])
+    selected_years = years or [int(y) for y in (cfg.get("years") or [])]
+    limit = int(max_per_venue or cfg.get("max_per_venue") or 200)
+
+    if not selected_venues or not selected_years:
+        print("  [WARN] Conference fetch requested but venues/years are empty", file=sys.stderr)
+        return []
+
+    papers = fetch_official_conference_papers(
+        venues=selected_venues,
+        years=selected_years,
+        max_per_venue=limit,
+        fetch_url=fetch_url,
+        score_paper=score_paper,
+        venue_folder_label_fn=venue_folder_label,
+    )
+    print(f"  Conferences: {len(papers)} papers after scoring", file=sys.stderr)
+    return papers
+
+
 # ── Merge & Dedup ──────────────────────────────────────────────────────────
 
 
 def extract_arxiv_id(url: str) -> str:
     m = re.search(r"(\d{4}\.\d{4,5})", url)
     return m.group(1) if m else ""
+
+
+def history_key_for_paper(paper: dict) -> str:
+    """Use arXiv ID for history when available; otherwise stable official-source key."""
+    aid = extract_arxiv_id(str(paper.get("url", ""))) or extract_arxiv_id(str(paper.get("pdf", "")))
+    return aid or paper_dedup_key(paper)
 
 
 def load_history() -> list[dict]:
@@ -346,20 +384,21 @@ def load_fallback_ids(days: int = 7) -> set[str]:
 def merge_and_dedup(
     hf_papers: list[dict],
     arxiv_papers: list[dict],
+    conference_papers: list[dict] | None,
     target_date,
     days: int = 1,
     top_n: int = TOP_N,
 ) -> list[dict]:
     is_weekend = target_date.weekday() >= 5
 
-    # ── merge by arXiv ID, keep higher score ──
+    # ── merge by arXiv ID first; official sources fall back to DOI/forum/ACL/CVF/title keys ──
     by_id: dict[str, dict] = {}
-    for p in hf_papers + arxiv_papers:
-        aid = extract_arxiv_id(p["url"])
-        if not aid:
+    for p in hf_papers + arxiv_papers + (conference_papers or []):
+        key = paper_dedup_key(p)
+        if not key:
             continue
-        if aid not in by_id or p["score"] > by_id[aid]["score"]:
-            by_id[aid] = p
+        if key not in by_id or p["score"] > by_id[key]["score"]:
+            by_id[key] = p
 
     print(f"  Merged: {len(by_id)} unique papers", file=sys.stderr)
 
@@ -389,23 +428,25 @@ def merge_and_dedup(
     # ── cross-day dedup ──
     deduped: dict[str, dict] = {}
     removed = 0
-    for aid, p in by_id.items():
-        if aid in history_ids:
+    for key, p in by_id.items():
+        hist_key = history_key_for_paper(p)
+        if hist_key in history_ids:
             # Weekend: keep trending with upvotes >= 5
             if is_weekend and p.get("source") == "hf-trending" and (p.get("hf_upvotes") or 0) >= 5:
                 p["is_re_recommend"] = True
-                p["last_recommend_date"] = history_ids[aid]
-                deduped[aid] = p
+                p["last_recommend_date"] = history_ids[hist_key]
+                deduped[key] = p
             else:
                 removed += 1
         else:
-            deduped[aid] = p
+            deduped[key] = p
 
     # Mark any remaining that appear in history
-    for aid, p in deduped.items():
-        if aid in history_ids and not p.get("is_re_recommend"):
+    for p in deduped.values():
+        hist_key = history_key_for_paper(p)
+        if hist_key in history_ids and not p.get("is_re_recommend"):
             p["is_re_recommend"] = True
-            p["last_recommend_date"] = history_ids[aid]
+            p["last_recommend_date"] = history_ids[hist_key]
 
     print(f"  After history dedup: {len(deduped)} (removed {removed})", file=sys.stderr)
 
@@ -416,10 +457,11 @@ def merge_and_dedup(
     # Back-fill from history if pool is thin
     if len(candidates) < 20 and removed > 0:
         backfill = []
-        for aid, p in by_id.items():
-            if aid not in deduped and p["score"] >= MIN_SCORE:
+        for key, p in by_id.items():
+            hist_key = history_key_for_paper(p)
+            if key not in deduped and p["score"] >= MIN_SCORE:
                 p["is_re_recommend"] = True
-                p["last_recommend_date"] = history_ids.get(aid, "unknown")
+                p["last_recommend_date"] = history_ids.get(hist_key, "unknown")
                 backfill.append(p)
         backfill.sort(key=lambda x: x["score"], reverse=True)
         needed = 20 - len(candidates)
@@ -439,6 +481,27 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", help="Target date YYYY-MM-DD (default: today)")
     parser.add_argument("--days", type=int, default=1, help="Number of days to fetch (default: 1)")
+    parser.add_argument(
+        "--include-conferences",
+        action="store_true",
+        help="Include official AI conference sources in addition to HF/arXiv",
+    )
+    parser.add_argument(
+        "--venue",
+        action="append",
+        help="Conference venue to fetch (repeatable), e.g. --venue ICLR --venue CVPR",
+    )
+    parser.add_argument(
+        "--conference-year",
+        type=int,
+        action="append",
+        help="Conference year to fetch (repeatable), e.g. --conference-year 2025",
+    )
+    parser.add_argument(
+        "--max-per-venue",
+        type=int,
+        help="Maximum papers to pull per venue/year from official sources",
+    )
     args = parser.parse_args()
 
     target_date = (
@@ -457,9 +520,25 @@ def main():
         file=sys.stderr,
     )
 
+    include_conferences = bool(args.include_conferences or _CONFERENCE_CONFIG.get("enabled"))
+
     hf_papers = fetch_hf_papers(start_date, target_date)
     arxiv_papers = fetch_arxiv_papers(start_date, target_date, days)
-    top = merge_and_dedup(hf_papers, arxiv_papers, target_date, days=days, top_n=top_n)
+    conference_papers = []
+    if include_conferences:
+        conference_papers = fetch_conference_papers(
+            years=args.conference_year,
+            venues=args.venue,
+            max_per_venue=args.max_per_venue,
+        )
+    top = merge_and_dedup(
+        hf_papers,
+        arxiv_papers,
+        conference_papers,
+        target_date,
+        days=days,
+        top_n=top_n,
+    )
 
     # Output to stdout (UTF-8 encoded for Windows compatibility)
     import io

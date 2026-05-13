@@ -3,6 +3,7 @@
 import copy
 import json
 import os
+import re
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -106,6 +107,28 @@ DEFAULT_CONFIG = {
         "git_commit": False,
         "git_push": False,
     },
+    "conference_papers": {
+        "enabled": True,
+        "venues": [
+            "NeurIPS",
+            "AAAI",
+            "ACM MM",
+            "ICLR",
+            "ICML",
+            "CVPR",
+            "ACL",
+            "ICCV",
+            "ECCV",
+        ],
+        "years": [2024, 2025],
+        "tracks": ["main"],
+        "official_first": True,
+        "max_per_venue": 200,
+        "default_source_label": "arxiv",
+        "venue_folder_labels": {
+            "ACM MM": "ACMMM",
+        },
+    },
 }
 
 
@@ -147,6 +170,24 @@ def daily_papers_config() -> dict:
     return load_user_config()["daily_papers"]
 
 
+def conference_papers_config() -> dict:
+    """Top-conference fetch settings (OpenReview / CVF / ACL / etc.)."""
+    cfg = load_user_config().get("conference_papers")
+    if isinstance(cfg, dict):
+        return cfg
+    return copy.deepcopy(DEFAULT_CONFIG["conference_papers"])
+
+
+def venue_folder_label(venue: str) -> str:
+    """Obsidian subfolder name under year/ for a conference venue."""
+    cfg = conference_papers_config()
+    overrides = cfg.get("venue_folder_labels") or {}
+    if venue in overrides:
+        return str(overrides[venue])
+    # Default: short alphanumeric-ish token
+    return re.sub(r"[^A-Za-z0-9]+", "", venue.replace(" ", "")) or "Conference"
+
+
 def automation_config() -> dict:
     config = load_user_config()["automation"]
     if config.get("git_push") and not config.get("git_commit"):
@@ -161,6 +202,15 @@ def obsidian_vault_path() -> Path:
 
 def paper_notes_dir() -> Path:
     return obsidian_vault_path() / paths_config()["paper_notes_folder"]
+
+
+def paper_report_dir(year, venue_or_source: str) -> Path:
+    """Resolved directory for year/source reading reports: 论文笔记/YYYY/SourceLabel/."""
+    y = str(year).strip()
+    label = venue_or_source if venue_or_source else conference_papers_config().get(
+        "default_source_label", "arxiv"
+    )
+    return paper_notes_dir() / y / label
 
 
 def daily_papers_dir() -> Path:

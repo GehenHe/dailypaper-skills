@@ -66,14 +66,18 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch, WebSearch
 
 | 模式 | 触发词 | 输出 |
 |------|--------|------|
-| **快速摘要** | "快速看一下"、"quick" | 3-5 句核心贡献 |
-| **完整解析** | "详细分析"、默认 | 结构化笔记（用模板） |
-| **批判分析** | "批判性分析"、"critique" | 方法论优缺点评估 |
-| **知识提取** | "提取公式"、"技术细节" | 公式 + 算法伪代码 |
+| **快速摘要 / 检索** | "快速看一下"、"quick"、"review"、"检索" | `quick` 阅读报告 |
+| **完整解析 / 深度阅读** | "详细分析"、"深度阅读"、默认 | `deep` 阅读报告 |
+| **批判分析** | "批判性分析"、"critique" | `deep` 阅读报告 + 方法论优缺点评估 |
+| **知识提取** | "提取公式"、"技术细节" | `deep` 阅读报告，重点补公式 + 算法伪代码 |
 
 ## 3. 笔记生成
 
-**模板**: 严格遵循 `assets/paper-note-template.md`，不可自行简化。
+**模板**:
+
+- `quick` 模式严格遵循 `assets/paper-report-quick-template.md`，只写 `元信息`、`一句话总结`、`核心贡献`、`问题背景`。
+- `deep` 模式严格遵循 `assets/paper-report-deep-template.md`，补全模板所有章节。
+- 旧模板 `assets/paper-note-template.md` 仅作为深度报告的细节参考，不再作为唯一保存模板。
 
 ### 核心质量规则
 
@@ -128,7 +132,17 @@ python3 ../daily-papers/download_note_images.py "{笔记完整路径}"
 
 ### 保存路径
 
-按 Zotero 分类层级：`{NOTES_PATH}/{zotero_collection_path}/{方法名}.md`
+报告与已下载 PDF 统一按年份和来源归档：
+
+```text
+{NOTES_PATH}/{YYYY}/{来源}/{basename}.md
+{NOTES_PATH}/{YYYY}/{来源}/{basename}.pdf
+```
+
+- `YYYY` 来自论文发表年、会议年或 arXiv 版本年。
+- `来源` 使用规范化标签：`arxiv`、`NeurIPS`、`ICLR`、`ICML`、`CVPR`、`ICCV`、`ECCV`、`ACL`、`AAAI`、`ACMMM`。
+- `basename` 优先使用方法名/模型名；无法判断时用规范化标题 slug。
+- 如果下载了 PDF，必须保存为与报告同名的 `.pdf`，与 `.md` 放在同一目录。
 
 ### YAML frontmatter
 
@@ -139,8 +153,13 @@ method_name: "MethodName"
 authors: [Author1, Author2]
 year: 2025
 venue: arXiv
+conference:
+source: arxiv
+paper_id:
+report_mode: quick  # quick / deep
+summary_status: partial  # partial / complete
 tags: [tag1, tag2]  # 小写连字符，3-8 个
-zotero_collection: 3-Robotics/1-VLX/VLA
+pdf_path: "论文笔记/2025/arxiv/MethodName.pdf"
 image_source: online
 created: YYYY-MM-DD
 ---
@@ -150,6 +169,7 @@ Tags 判断：看 Related Work 小标题 + Abstract 关键词。第一个 tag �
 
 ### 保存后自动执行
 
+0. 验证报告路径符合 `{NOTES_PATH}/{YYYY}/{来源}/{basename}.md`；如果存在同名 PDF，确认 `{basename}.pdf` 与报告同目录。
 1. 只有在 `AUTO_REFRESH_INDEXES=true` 时才刷新目录页：
    ```bash
    python3 ../_shared/generate_concept_mocs.py
@@ -189,11 +209,13 @@ Tags 判断：看 Related Work 小标题 + Abstract 关键词。第一个 tag �
 - [ ] 正文中技术术语有 `[[概念]]` 内联链接？
 - [ ] 概念库已更新（缺失的概念已创建）？
 - [ ] 图片可用（外链可加载 / 本地 >10KB）？
+- [ ] 报告与 PDF 位于 `论文笔记/{年份}/{来源}/`，且同名不同扩展名？
+- [ ] frontmatter 中 `report_mode`、`source`、`paper_id`、`summary_status` 已填写？
 
 ## 7. 交互式功能
 
-完成解析后询问：深入解释？对比其他论文？保存到 Obsidian？
-保存后自动创建缺失概念笔记，报告新增概念数量。
+完成解析后询问：是否需要升级为深度阅读、对比其他论文或补充实验细节。
+所有模式都必须保存到 Obsidian；`quick` 可后续升级为 `deep`，升级时覆盖同名 `.md` 并将 `summary_status` 改为 `complete`。
 
 ## 8. 批量处理
 

@@ -78,5 +78,27 @@
     "auto_refresh_indexes": true,
     "git_commit": false,
     "git_push": false
+  },
+  "conference_papers": {
+    "enabled": true,
+    "venues": [
+      "NeurIPS",
+      "AAAI",
+      "ACM MM",
+      "ICLR",
+      "ICML",
+      "CVPR",
+      "ACL",
+      "ICCV",
+      "ECCV"
+    ],
+    "years": [2024, 2025],
+    "tracks": ["main"],
+    "official_first": true,
+    "max_per_venue": 200,
+    "default_source_label": "arxiv",
+    "venue_folder_labels": {
+      "ACM MM": "ACMMM"
+    }
   }
 }

@@ -49,6 +49,17 @@ python3 ../_shared/generate_paper_mocs.py
    - 新建 / 更新了多少个目录页
    - 目录页文件写到了哪里
 
+## 论文报告归档结构
+
+论文目录页必须纳入新的报告/PDF 归档目录：
+
+```text
+{NOTES_PATH}/{YYYY}/{来源}/{basename}.md
+{NOTES_PATH}/{YYYY}/{来源}/{basename}.pdf
+```
+
+其中 `{来源}` 是 `arxiv`、`NeurIPS`、`ICLR`、`ICML`、`CVPR`、`ICCV`、`ECCV`、`ACL`、`AAAI`、`ACMMM` 等规范化标签。`_概念/` 仍然只由概念目录脚本处理。
+
 ## git 自动化
 
 默认配置下：
@@ -70,4 +81,5 @@ python3 ../_shared/generate_paper_mocs.py
 
 - 目录页生成逻辑必须来自仓库自带脚本，不依赖 `VAULT_PATH/scripts/*`
 - 重复运行应保持幂等
+- `论文笔记/{数字年份}/` 下的来源目录必须被论文目录页索引
 - 用户手动运行这个 skill 时，不受 `AUTO_REFRESH_INDEXES` 开关影响
