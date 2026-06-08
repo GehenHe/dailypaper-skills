@@ -1,27 +1,101 @@
 ---
+type: paper
 title: "{Title}"
 method_name: "{MethodName}"
-authors: [{Authors}]
-year: {Year}
-venue: {Venue}
-tags: [{tags}]
-zotero_collection: {zotero_path}
-image_source: online  # online（默认）/ mixed / local
-arxiv_html: {arxiv_html_url}  # 如有
-created: {date}
+aliases: ["{MethodName}"]
+authors: ["{Authors}"]
+institutions: ["{Institutions}"]
+institution_types: ["{InstitutionTypes}"]
+year: "{Year}"
+venue: "{Venue}"
+conference: "{Conference}"
+source: "{Source}"
+paper_id: "{PaperId}"
+report_mode: deep
+summary_status: complete
+status: read
+relevance: "{high|medium|low}"
+research_line: ["{ResearchLines}"]
+problem: ["{Problems}"]
+method_family: ["{MethodFamilies}"]
+core_concepts: ["{CoreConcepts}"]
+datasets: ["{Datasets}"]
+baselines: ["{Baselines}"]
+tasks: ["{Tasks}"]
+claims: ["{Claims}"]
+limitations: ["{Limitations}"]
+tags: [paper, "{tags}"]
+zotero_collection: "{zotero_path}"
+pdf_path: "{PdfPath}"
+image_source: online
+arxiv: "{arxiv_url}"
+arxiv_html: "{arxiv_html_url}"
+code: "{code_url}"
+project_page: "{project_page_url}"
+created: "{date}"
 ---
 
-# 论文笔记：{Title}
+# {MethodName}
 
 ## 元信息
 
 | 项目 | 内容 |
 |------|------|
-| 机构 | {Affiliations} |
-| 日期 | {Month Year} |
+| 标题 | {Title} |
+| 方法/模型 | {MethodName} |
+| 作者 | {Authors} |
+| 作者单位 | [[{Institution1}]] · [[{Institution2}]] |
+| 机构类型 | {university / industry / institute / unknown} |
+| 发表 | {VenueOrConference} |
+| 年份 | {Year} |
 | 项目主页 | {project_page_url} |
-| 对比基线 | [[{baseline_paper}]] |
-| 链接 | [arXiv]({arxiv_url}) / [Code]({code_url}) |
+| 来源 | {Source} |
+| 链接 | [Paper]({paper_url}) / [PDF]({pdf_url}) / [Code]({code_url}) |
+| 相关方向 | [[{ResearchLine1}]] · [[{ResearchLine2}]] |
+| 关注度 | {high / medium / low}: {一句话理由} |
+---
+
+## 快速索引
+
+| 维度 | 内容 |
+|------|------|
+| 解决问题 | [[{ProblemConcept1}]] · [[{ProblemConcept2}]] |
+| 方法族 | [[{MethodFamily1}]] · [[{MethodFamily2}]] |
+| 核心概念 | [[{CoreConcept1}]] · [[{CoreConcept2}]] |
+| 数据集/Benchmark | [[{Dataset1}]] · [[{Dataset2}]] |
+| 对比 Baseline | [[{Baseline1}]] · [[{Baseline2}]] |
+| 任务/场景 | [[{Task1}]] · [[{Task2}]] |
+| 关键 claim | {claim1}；{claim2} |
+| 主要局限 | [[{LimitationConcept1}]] · [[{LimitationConcept2}]] |
+
+---
+
+## 知识关系
+
+### 解决的问题
+
+- [[{ProblemConcept1}]]: {本文具体解决该问题的哪个方面}
+- [[{ProblemConcept2}]]: {如果有第二个核心问题，写清楚关系}
+
+### 使用的方法
+
+- [[{CoreMethodConcept}]]: {作为核心框架 / 表征 / 训练目标 / 推理机制}
+- [[{SupportingConcept}]]: {作为辅助模块或实现技巧}
+
+### 依赖的前置工作
+
+- [[{PriorWorkOrConcept}]]: {本文继承、初始化、借鉴或扩展了什么}
+
+### 对比的工作
+
+- [[{Baseline1}]]: {为什么对比，本文相对它解决了什么}
+- [[{Baseline2}]]: {对比关系}
+
+### 产生的新问题
+
+- [[{LimitationConcept}]]: {本文结果暴露出的限制或后续问题}
+
+---
 
 ---
 
@@ -42,48 +116,44 @@ created: {date}
 ## 问题背景
 
 ### 要解决的问题
-{这篇论文要解决什么问题？}
+{这篇论文要解决什么问题？首次出现的问题类型用 [[概念]] 链接。}
 
 ### 现有方法的局限
-{之前的方法有什么不足？}
+{之前的方法有什么不足？指出具体 baseline 或方法族，并使用 [[概念]] 链接。}
 
 ### 本文的动机
 {为什么作者认为他们的方法能解决这个问题？}
 
----
 
 ## 方法详解
 
-### 模型架构
+### 整体框架
+{说明输入、核心模块、输出和训练/推理流程。首次出现的技术术语使用 [[概念]] 链接。}
 
-<!-- 使用 [[概念]] 内联链接所有技术术语 -->
+### 输入输出
 
-{方法名} 采用 **{架构类型}** 架构：
-- **输入**: 语言指令 $l$ + 观测 $o_t$ + 状态 $s_t$
-- **Backbone**: {使用的主干网络}
-- **核心模块**: [[{核心技术1}]] 用于 [[{核心技术2}]]
-- **输出**: [[Action Chunking|动作块]] $a_{t:t+k}$
-- **总参数**: {参数量}
+- 输入: {语言 / 图像 / 视频 / 音频 / 动作 / 状态等}
+- 输出: {预测目标或生成对象}
+- 训练信号: {监督信号、损失、偏好数据、轨迹数据等}
 
 ### 核心模块
+{逐模块解释设计动机、实现方式和与现有方法的差异。}
 
-#### 模块1: {名称}
+1. **{模块1}**: {模块作用、输入输出、为什么必要}
+2. **{模块2}**: {模块作用、输入输出、为什么必要}
+3. **{模块3}**: {模块作用、输入输出、为什么必要}
 
-**设计动机**: 利用 [[{相关概念}]] 实现 {目标}
+### 损失函数 / 训练目标
 
-**具体实现**:
-- 使用 [[{技术A}]] 进行 {处理1}
-- 通过 [[{技术B}]] 实现 {处理2}
+$$
+{核心损失或目标函数}
+$$
 
-#### 模块2: {名称}
-
-{同上格式，注意内联概念链接}
+**作用**: {说明该目标约束了什么行为。}
 
 ---
 
 ## 关键公式
-
-<!-- 公式标题使用 [[概念|名称]] 格式链接到概念库 -->
 
 ### 公式1: [[{概念名}|{公式用途}]]
 
@@ -94,79 +164,39 @@ $$
 **含义**: {一句话解释公式的作用}
 
 **符号说明**:
-- $\tau \sim \mathcal{U}(0, 1)$: {含义}
+- ${符号1}$: {含义}
 - ${符号2}$: {含义}
 
-### 公式2: [[{概念名}]] 损失
+### 公式2: [[{概念名}|{公式用途}]]
 
 $$
-\mathcal{L}_{total} = \lambda_1 \mathcal{L}_{task} + \lambda_2 \mathcal{L}_{reg}
+{公式内容}
 $$
 
-**含义**: {损失函数的整体作用}
+**含义**: {一句话解释公式的作用}
 
 **符号说明**:
-- $\lambda_1, \lambda_2$: 权重系数
-- $\mathcal{L}_{task}$: {任务损失作用}
-- $\mathcal{L}_{reg}$: {正则项作用}
-
-### 公式3: 采样/推理过程
-
-$$
-{推理公式}
-$$
-
-**含义**: {推理过程说明}
-
-{... 列出论文中所有重要公式 ...}
+- ${符号1}$: {含义}
+- ${符号2}$: {含义}
 
 ---
 
 ## 关键图表
 
-<!-- 图片：下载到本地 assets/ 文件夹，用 ![[]] wikilink 嵌入 -->
-<!-- 命名规范: {方法名}_fig{N}_{英文描述}.png -->
-<!-- 下载后必须验证：文件 >10KB、Read 确认内容正确 -->
+### Figure 1: {图题}
 
-### Figure 1: Overview / 系统概览
+![Figure 1]({figure_url})
 
-![[{MethodName}_fig1_overview.png]]
-
-**说明**: {方法名} 的整体架构。输入 {输入内容}，通过 [[{核心技术}]] 处理，输出 {输出内容}。
-
-### Figure 2: Model Architecture / 模型架构
-
-![[{MethodName}_fig2_architecture.png]]
-
-**说明**: 展示 [[{模块名}]] 的详细结构。{核心设计点}。
-
-### Figure 3: Experiment Results / 实验结果
-
-![[{MethodName}_fig3_results.png]]
-
-**说明**: {实验的关键发现}，{方法名} 在 {指标} 上超越 baseline {百分比}。
+**说明**: {解释图片内容和关键信息}
 
 ### Table 1: {表格标题}
 
-| Method | Metric1 | Metric2 | Metric3 |
-|--------|---------|---------|---------|
-| Baseline1 | x.xx | x.xx | x.xx |
-| Baseline2 | x.xx | x.xx | x.xx |
-| **Ours** | **x.xx** | **x.xx** | **x.xx** |
+| Method | Metric1 | Metric2 |
+|--------|---------|---------|
+| [[{Baseline}]] | x.xx | x.xx |
+| **[[{MethodName}]]** | **x.xx** | **x.xx** |
 
 **说明**: {表格的关键发现}
-
-### Table 2: 消融实验
-
-| 配置 | Metric | 说明 |
-|------|--------|------|
-| w/o Module A | x.xx | {影响分析} |
-| w/o Module B | x.xx | {影响分析} |
-| Full Model | x.xx | - |
-
-**关键发现**: {消融实验最重要的结论}
-
-{... 列出论文中所有重要图表 ...}
 
 ---
 
@@ -176,20 +206,16 @@ $$
 
 | 数据集 | 规模 | 特点 | 用途 |
 |--------|------|------|------|
-| {Dataset1} | {size} | {特点} | 训练/测试 |
-| {Dataset2} | {size} | {特点} | 测试 |
+| [[{Dataset1}]] | {size} | {特点} | 训练/测试 |
 
-### 实现细节
+### 主要结果
+{总结主要定量结果、对比基线和统计显著性。}
 
-- **Backbone**: {使用的骨干网络}
-- **优化器**: {Adam/SGD, 学习率}
-- **Batch Size**: {大小}
-- **训练轮数**: {epochs}
-- **硬件**: {GPU 型号和数量}
+### 消融实验
+{总结关键消融和结论。}
 
-### 可视化结果
-
-{定性结果的关键观察}
+### 证据强度
+{strong / moderate / weak}: {说明样本范围、benchmark 可信度、是否真实实验、是否依赖人工标注等。}
 
 ---
 
@@ -198,51 +224,59 @@ $$
 ### 优点
 1. {优点1}
 2. {优点2}
-3. {优点3}
 
 ### 局限性
-1. {局限1}
-2. {局限2}
+1. [[{LimitationConcept1}]]: {局限1}
+2. [[{LimitationConcept2}]]: {局限2}
 
-### 潜在改进方向
-1. {改进方向1}
-2. {改进方向2}
+### 潜在改进
+{结合用户研究方向提出可借鉴或可扩展点。}
 
-### 可复现性评估
+### 可复现性
+
 - [ ] 代码开源
-- [ ] 预训练模型
-- [ ] 训练细节完整
+- [ ] 权重开源
 - [ ] 数据集可获取
+- [ ] 训练细节充分
+- [ ] 评测脚本或 benchmark 可用
 
 ---
 
-## 关联笔记
+## 相关工作
 
-### 基于
-- [[{前置工作1}]]: {说明}
-- [[{前置工作2}]]: {说明}
+| 论文 | 关系 | 说明 |
+|------|------|------|
+| [[{相关论文1}]] | 基于/对比/同类 | {说明} |
 
-### 对比
-- [[{对比方法1}]]: {为什么对比}
-- [[{对比方法2}]]: {为什么对比}
+---
 
-### 方法相关
-- [[{核心技术1}]]: 核心方法
-- [[{核心技术2}]]: 重要组件
+## 可复用知识
 
-### 硬件/数据相关
-- [[{硬件或数据集}]]: {说明}
+### 可以借鉴
+
+- {可以迁移到自己项目、实验设计或系统架构中的点}
+
+### 不适合直接复用
+
+- {由于数据、算力、硬件、任务假设或许可证导致的限制}
+
+### 适合连接到的研究线
+
+- [[{ResearchLine1}]]
+- [[{ResearchLine2}]]
+
+---
+
+## 后续阅读
+
+- [ ] [[{后续论文或概念}]]
 
 ---
 
 ## 速查卡片
 
-> [!summary] {Paper Title}
+> [!summary] {Title}
 > - **核心**: {一句话核心}
 > - **方法**: {关键方法}
 > - **结果**: {主要结果}
 > - **代码**: {GitHub链接}
-
----
-
-*笔记创建时间: {timestamp}*

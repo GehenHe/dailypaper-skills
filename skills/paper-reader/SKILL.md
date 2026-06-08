@@ -81,29 +81,41 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch, WebSearch
 
 ### 核心质量规则
 
-1. **零遗漏**: 论文中所有 Figure、所有公式、所有 Table 必须全部出现在笔记中
-2. **内联概念链接**: 正文中首次出现的技术术语必须用 `[[概念]]` 链接，不仅仅是结尾
-3. **严禁 ASCII 流程图**: 用结构化 Markdown 列表 + `$数学符号$` 描述架构
-4. **公式完整性**: 每个公式必须有名称（`[[概念|名称]]`）、LaTeX 公式、含义、符号说明
-5. **图片外链优先**: arXiv HTML / 项目主页 / GitHub，找不到再本地下载
+1. **深度阅读优先**: 保留 `paper-deep.md` 的阅读流，包括核心贡献、问题背景、方法详解、关键公式、关键图表、实验、批判性思考、相关工作和速查卡片
+2. **图谱检索增强**: 在深度阅读结构上补充 Dataview 友好的 YAML 字段、增强元信息表、快速索引和知识关系区
+3. **中等完整**: 保留关键方法图、1-3 个核心公式、主结果表/实验结论、主要局限证据；不要默认搬运所有 Figure/Table/公式
+4. **内联双链**: 正文中首次出现的重要概念、方法、数据集、baseline、任务和机构必须用 `[[概念]]` 链接，不仅仅是结尾
+5. **严禁 ASCII 流程图**: 用结构化 Markdown 列表 + `$数学符号$` 描述架构
+6. **公式完整性**: 每个关键公式必须有名称（`[[概念|名称]]`）、LaTeX 公式、含义、符号说明
+7. **图片外链优先**: arXiv HTML / 项目主页 / GitHub，找不到再本地下载
 
 > 公式/图片/表格的详细质量规范见 `references/quality-standards.md`
 
 ### 图片获取流程（多源 fallback）
 
-**目标**: 确保笔记中包含论文的**所有 Figure**，先统计论文 Figure 总数再逐一获取。
+**目标**: 确保笔记中包含最能支撑知识关系和方法理解的关键图片。默认至少包含 1 张方法总览/系统架构图；如果论文的核心贡献依赖实验可视化，再补充关键结果图。只有用户明确要求“完整图表提取”时，才按 `references/quality-standards.md` 的零遗漏标准处理所有 Figure/Table/公式。
 
-1. WebSearch `"{论文标题} arxiv"` 获取 arXiv ID
-2. **来源 A — arXiv HTML**（首选）：
-   - WebFetch `https://arxiv.org/html/{arxiv_id}` 提取所有 `<figure>` 的标题与 img src URL
-   - 统计论文 Figure 总数，确认提取数量是否完整
-3. **来源 B — 项目主页**（HTML 404 或图片不全时）：
+1. **先确定 arXiv ID**：
+   - 如果用户输入是 arXiv abs/pdf/html 链接，直接解析 ID
+   - 如果只有标题，先 WebSearch `"{论文标题} arxiv"` 获取 arXiv ID
+2. **来源 A — arXiv HTML（必须先尝试，不能静默跳过）**：
+   - 只要存在 arXiv ID，就必须先 WebFetch `https://arxiv.org/html/{arxiv_id}`
+   - 提取 `<figure>` / `<img>` / caption 中的图片 URL、Figure 编号和标题
+   - 优先选择 Overview / Architecture / Method / Pipeline / Main Results 等关键图
+   - 如果 arXiv HTML 不可访问、无 `<figure>`、图片 URL 为空、图片 URL 无法加载，必须在笔记的“关键图表”或“自检备注”中写明失败原因，例如：`arXiv HTML 图片提取失败：HTML 404` / `未找到可用 figure URL`
+   - 只有记录失败原因后，才允许进入项目主页或 PDF 兜底
+3. **来源 B — 项目主页**（HTML 失败或图片不全时）：
    - 从摘要/HTML 中查找项目主页 URL（常见模式：`project page`、`github.io`、`our website`）
    - WebFetch 项目主页，提取展示图片（通常包含 teaser / demo 图）
-4. **来源 C — PDF 提取**（前两者都失败时）：
-   - `pdfimages -png` 从 PDF 中提取，筛选 >10KB 的有效图片
-5. 笔记中用 `![Figure X](url)` 外链嵌入
-6. 验证：外链可加载 / 本地文件 >10KB
+4. **来源 C — PDF 提取 / 裁图**（前两者都失败时）：
+   - 优先用 `pdfimages -png` 从 PDF 中提取，筛选 >10KB 的有效图片
+   - 如果环境没有 `pdfimages`，使用可用 PDF 库（如 PyMuPDF/fitz）按 Figure 所在页裁出关键图，保存到笔记同目录 `assets/`
+   - PDF 兜底产物用 Obsidian wikilink 嵌入：`![[{MethodName}_fig1_overview.png]]`
+5. **写入笔记**：
+   - 在线图片用 `![Figure X](url)` 外链嵌入
+   - 本地图片用 `![[local_image.png]]` 嵌入
+   - 不能只写 Figure 标题和说明；至少 1 张关键图必须有实际图片嵌入，除非所有来源都失败且已写明失败原因
+6. **验证**：外链可加载 / 本地文件 >10KB
 7. **URL 去重**：写入前检查 URL 中是否有重复的 arxiv_id 路径段（如 `2603.05312v1/2603.05312v1/`），有则删除重复段。详见 `references/image-troubleshooting.md`
 
 > ar5iv 编号不一定对应 Figure 编号，排错见 `references/image-troubleshooting.md`
@@ -148,24 +160,44 @@ python3 ../daily-papers/download_note_images.py "{笔记完整路径}"
 
 ```yaml
 ---
+type: paper
 title: "论文标题"
 method_name: "MethodName"
 authors: [Author1, Author2]
+institutions: [Institution1, Institution2]
+institution_types: [university, industry]
 year: 2025
 venue: arXiv
-conference:
 source: arxiv
-paper_id:
-report_mode: quick  # quick / deep
-summary_status: partial  # partial / complete
-tags: [tag1, tag2]  # 小写连字符，3-8 个
+report_mode: deep
+summary_status: complete
+status: read
+relevance: high
+research_line: [robot-learning, world-model]
+problem: [long-horizon-manipulation]
+method_family: [diffusion-policy]
+core_concepts: [Diffusion Policy, Action Chunking]
+datasets: [DROID, LIBERO]
+baselines: [OpenVLA, Pi0.5]
+tasks: [manipulation]
+claims: [better-generalization]
+limitations: [sim-to-real-gap]
+tags: [paper, tag1, tag2]  # 小写连字符，3-8 个
+zotero_collection: 3-Robotics/1-VLX/VLA
 pdf_path: "论文笔记/2025/arxiv/MethodName.pdf"
 image_source: online
+arxiv: https://arxiv.org/abs/XXXX
+code: https://github.com/...
 created: YYYY-MM-DD
 ---
 ```
 
-Tags 判断：看 Related Work 小标题 + Abstract 关键词。第一个 tag 是最核心主题。
+字段规则：
+- `institutions` 记录机构级作者单位，例如 `NVIDIA`、`Stanford University`、`Google DeepMind`
+- `institution_types` 使用 `university` / `industry` / `institute` / `unknown`
+- `research_line`、`problem`、`method_family`、`tasks` 使用稳定英文 slug，便于 Dataview 查询
+- `core_concepts`、`datasets`、`baselines`、`institutions` 使用规范实体名，必须能和正文 `[[...]]` 双链对应
+- Tags 判断：看 Related Work 小标题 + Abstract 关键词。第一个 tag 是最核心主题
 
 ### 保存后自动执行
 
@@ -191,26 +223,36 @@ Tags 判断：看 Related Work 小标题 + Abstract 关键词。第一个 tag �
 ### 流程
 
 1. **扫描**论文笔记中所有 `[[概念]]` 链接
-2. **检查**每个链接对应的概念笔记是否存在（`ls` + `find`）
-3. **创建**不存在的概念（不可跳过），自动归类到对应子目录
+2. **区分节点类型**：
+   - 技术概念、方法、数据集、benchmark、仿真器、硬件平台 -> 概念库
+   - 机构 -> `{NOTES_PATH}/_实体/机构/`
+   - 作者个人默认不建节点，除非用户明确要求追踪作者
+3. **检查**每个链接对应的笔记是否存在（`ls` + `find`）
+4. **创建**不存在的概念或机构节点（不可跳过），自动归类到对应子目录
 
 > 分类规则和模板见 `references/concept-categories.md`
 
 ### 自检
 
 - [ ] 笔记中所有 `[[概念]]` 链接的概念笔记都存在？
+- [ ] `institutions` 字段中的机构都有对应 `[[机构]]` 双链？
 - [ ] 概念笔记包含本论文作为"代表工作"？
 
 ## 6. 完成后自检（合并 checklist）
 
-- [ ] 所有 Figure 都在笔记中（数量与论文一致）？
-- [ ] 所有公式都在笔记中（变量一致、无冲突）？
-- [ ] 所有 Table 完整保留（所有行列）？
-- [ ] 正文中技术术语有 `[[概念]]` 内联链接？
-- [ ] 概念库已更新（缺失的概念已创建）？
+- [ ] YAML frontmatter 包含 `type/status/relevance/institutions/research_line/problem/method_family/core_concepts/datasets/baselines/tasks/claims/limitations`？
+- [ ] 正文保留 `paper-deep.md` 的深度阅读主线，而不是只输出索引和关系？
+- [ ] `institutions` 是机构级列表，正文“作者与机构”小节使用了机构双链？
+- [ ] “知识关系”小节包含解决的问题、使用的方法、前置工作、对比工作、产生的新问题？
+- [ ] 至少包含 1 张关键方法图或系统图的实际图片嵌入（`![...](...)` 或 `![[...]]`），不能只有 Figure 标题和说明？
+- [ ] 图片来源链路已执行：arXiv HTML 优先；如失败，已记录失败原因并尝试项目主页/PDF 兜底？
 - [ ] 图片可用（外链可加载 / 本地 >10KB）？
 - [ ] 报告与 PDF 位于 `论文笔记/{年份}/{来源}/`，且同名不同扩展名？
 - [ ] frontmatter 中 `report_mode`、`source`、`paper_id`、`summary_status` 已填写？
+- [ ] 至少包含 1 个核心公式或明确说明"本文无关键公式/公式不适用"？
+- [ ] 至少包含主结果表/关键实验结论，并判断证据强度？
+- [ ] 正文中重要技术术语、数据集、baseline、机构有 `[[概念]]` 内联链接？
+- [ ] 概念库已更新（缺失的概念已创建）？
 
 ## 7. 交互式功能
 

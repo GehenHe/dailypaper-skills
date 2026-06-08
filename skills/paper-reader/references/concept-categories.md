@@ -52,3 +52,50 @@ $$公式$$
 - [[相关概念1]]
 - [[相关概念2]]
 ```
+
+## 实体节点规则
+
+论文笔记中的机构双链不是技术概念，不放入 `{CONCEPTS_PATH}`。机构节点建议放在：
+
+```text
+{NOTES_PATH}/_实体/机构/
+```
+
+作者个人默认不建节点，除非用户明确要求追踪作者网络。
+
+### 机构归一化
+
+- 使用稳定英文机构名作为文件名，例如 `NVIDIA.md`、`Stanford University.md`、`Google DeepMind.md`
+- 同一机构的别名写入 `aliases`，不要创建多个重复节点
+- 不确定机构类型时，`institution_type: unknown`
+- 国家信息不确定时留空，不要猜测
+
+### 机构笔记模板
+
+````markdown
+---
+type: institution
+aliases: []
+institution_type: university  # university / industry / institute / unknown
+country:
+---
+
+# 机构名称
+
+## 相关论文
+
+```dataview
+LIST
+FROM "论文笔记"
+WHERE contains(institutions, this.file.name)
+```
+
+## 相关方向
+
+```dataview
+TABLE research_line, method_family, year
+FROM "论文笔记"
+WHERE contains(institutions, this.file.name)
+SORT year DESC
+```
+````

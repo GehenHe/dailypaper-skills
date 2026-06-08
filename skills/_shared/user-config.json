@@ -1,6 +1,6 @@
 {
   "paths": {
-    "obsidian_vault": "~/ObsidianVault",
+    "obsidian_vault": "/mnt/e/wsl_share/Obsidian",
     "paper_notes_folder": "论文笔记",
     "daily_papers_folder": "DailyPapers",
     "concepts_folder": "_概念",
